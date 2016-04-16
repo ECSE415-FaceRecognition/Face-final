@@ -17,12 +17,6 @@ const char QMUL_DIR[] = "QMUL/";
 using namespace cv;
 using namespace std;
 
-#include <iostream>
-#include <fstream>
-using namespace std;
-
-
-
 template <typename T>
 void seven_fold_cv(std::vector<T> &people, std::vector<std::vector<T> > &folds) {
 
@@ -88,11 +82,6 @@ struct BOWData {
 	cv::Mat image;
 	std::string name;
 };
-struct ProbData {
-	cv::Mat mean;
-	cv::Mat covar;
-	std::string name;
-};
 
 struct ImgDec {
 	Mat descriptor;
@@ -105,107 +94,6 @@ const int NUM_FOLDS = 7;
 void Train(std::vector<std::vector<BOWData>> &training_images, Mat &codeBook, vector<vector<ImgDec>> &imageDescriptors, const int numCodewords, Mat& D, Ptr<DescriptorExtractor> extractor, vector<vector<vector<KeyPoint>>> &imageKeypoints);
 void Test(std::vector<std::vector<BOWData>> &testing_images, const Mat codeBook, vector<vector<ImgDec>> const& imageDescriptors, int num, vector<string> people);
 void find_all_keypoints(std::vector<std::vector<BOWData>> &training_images, vector<vector<vector<KeyPoint>>> &imageKeypoints, Mat &D, Ptr<DescriptorExtractor> extractor);
-
-
-//std::string do_lbp_prob_match(std::vector<std::vector<BOWData> > histograms, BOWData test, std::vector<std::string> const& people_tmp) {
-//
-//	int sz = histograms[0].size();
-//	std::vector<probdata> gaussians;
-//	std::vector<cv::mat> all_histogram_of_person;
-//	/* fill `gaussians with the covar and mean of all images of one person */
-//	for (auto &person : histograms) {
-//		all_histogram_of_person.clear();
-//		/* iterate through all images of a person */
-//		for (auto &image : person) {
-//			// std::cout << image.name << std::endl;
-//			cv::mat tmp;
-//			for (auto &level_hist : image.hist) {
-//				tmp.push_back(level_hist);
-//			}
-//			all_histogram_of_person.push_back(tmp);
-//		}
-//
-//		/* fill probdata struct */
-//		probdata tmp;
-//		tmp.name = person[0].name;
-//		cv::calccovarmatrix(all_histogram_of_person, tmp.covar, tmp.mean, cv_covar_normal, 5);
-//
-//		/* store covar and mean of this person */
-//		gaussians.push_back(tmp);
-//	}
-//
-//	std::vector<cv::mat> test_vector;
-//	probdata tmp;
-//
-//	cv::mat person;
-//	tmp.name = test.name;
-//	for (auto &level : test.hist) {
-//		person.push_back(level);
-//	}
-//
-//	//std::cout << "size of histogram" << person.size() << std::endl;
-//
-//	//    gaussians.push_back(tmp);
-//
-//	auto sz_covar = gaussians[0].covar.size();
-//	auto sz_mean = gaussians[0].mean.size();
-//	for (auto &gaussian : gaussians) {
-//		if (gaussian.mean.size() != sz_mean) {
-//			std::cout << gaussian.name << " has a strange mean size" << std::endl;
-//		}
-//		if (gaussian.covar.size() != sz_covar) {
-//			std::cout << gaussian.name << " has a strange covar size" << std::endl;
-//		}
-//	}
-//
-//
-//	// todo diagonalize a matrix ?? http://cs229.stanford.edu/section/gaussians.pdf ??
-//	// todo compute gaussian difference
-//
-//	/*
-//	* max(p(i|s)) => probability of i (a person) given s (a multivariate gaussian of a testing
-//	* image)
-//	*
-//	* => how to get p(s|i) using covar and mean? (
-//	* https://en.wikipedia.org/wiki/multivariate_normal_distribution#non-degenerate_case)
-//	*/
-//
-//	cv::mat best; std::string best_name;
-//	for (int i = 0; i < gaussians.size(); i++) {
-//		cv::mat diff = (person - gaussians[i].mean);
-//		cv::mat exponent = diff.t() * gaussians[i].covar.inv(cv::decomp_svd) * diff;
-//
-//		exponent = cv::abs(exponent);
-//
-//		if (best.empty() || (exponent.at<double>(0, 0) < best.at<double>(0, 0))) {
-//			best = exponent;
-//			best_name = gaussians[i].name;
-//		}
-//
-//		//std::cout << "exponent is " <<  exponent << " for " << gaussians[i].name  <<  std::endl;
-//		//std::cout << "result is   " <<  result << " for " << gaussians[i].name  <<  std::endl;
-//	}
-//
-//	//std::cout << "actual: " << tmp.name << std::endl;
-//	//std::cout << "guess: " << best_name << std::endl;
-//
-//	/*
-//	* => use same method to get p(s) from testing image
-//	* p(i|s) = p(s|i) / p(s)
-//	* p(i|s) = p(s|i) / sum(...)
-//	*/
-//
-//	for (auto &person : people_tmp) {
-//		if (best_name.find(person) != std::string::npos) {
-//			//std::cout << person << std::endl;
-//			return person;
-//		}
-//	}
-//
-//	return "error";
-//}
-
-
 
 void main(void)
 {
@@ -221,7 +109,7 @@ void main(void)
 
 	/* Set the number of codewords*/
 	//const int numCodewords = 100; 
-	int n_codewords[] = { /*10, 20 50, 100,  200, */ 300 /*, 400, 500, 600, 700, 800, 900, 1000*/ };
+	int n_codewords[] = {/*10, 20, 50, 100, */ 200/*, 300, 400, 500, 600, 700, 800, 900, 1000 */};
 	/* Load the dataset by instantiating the helper class */
 
 
@@ -410,75 +298,33 @@ void Test(std::vector<std::vector<BOWData>> &testing_images, const Mat codeBook,
 			// TODO, maybe wer're looping across the wrong variables
 			for (unsigned int i = 0; i < imageDescriptors.size(); i++) {
 				for (unsigned int j = 0; j < imageDescriptors[i].size(); j++) {
-					double d = norm(bag, imageDescriptors[i][j].descriptor);/*, CV_COMP_CHISQR);*/
+					double d = compareHist(bag, imageDescriptors[i][j].descriptor, CV_COMP_CHISQR);
 					if (d < min) {
 						//std::cout << "Better Match match in category: " << i << std::endl;
-						//cout << bag;
 						min = d;
 						category = i;
 						image_index = j;
 						//std::cout << "Testing image: " << testing_images[cat][im].name << " guessed image" << imageDescriptors[category][image_index].name << std::endl;
 					}
 				}
-
 			}
 
 			std::ostringstream os;
 
 			// TODO Uncomment for part 2
-			//std::cout << "Testing image: " << testing_images[cat][im].name << " guessed image" << imageDescriptors[category][image_index].name << std::endl;
-			//std::cout << "Testing image: " << bag;
+			std::cout << "Testing image: " << testing_images[cat][im].name << " guessed image" << imageDescriptors[category][image_index].name << std::endl;
+
 
 			//os << "test_image_" << cat << "_" << im << "_codewords_" << num << "_actual_" << testing_images[cat][0].name << "_guessed_ " << training_images[category][0].name << ".jpg";
 			//imwrite(os.str(), image);
 			//imshow(os.str(), image);
 			//std::cout << "Best match in category: " << category << std::endl;
 
-			int matched = 0;
-			int unmatched = 0;
-
 			for (int i = 0; i < people.size(); i++) {
 				if (testing_images[cat][im].name.find(people[i]) != string::npos 
 					&& imageDescriptors[category][image_index].name.find(people[i]) != string::npos) {
 					total_correct++;
-					if (matched < 2){
-						if (matched == 1){
-							ofstream myfile;
-							myfile.open("Match1.txt");
-							myfile << imageDescriptors[category][image_index].descriptor;
-							myfile.close();
-							matched++;
-						}
-						else {
-							ofstream myfile;
-							myfile.open("Match2.txt");
-							myfile << imageDescriptors[category][image_index].descriptor;
-							myfile.close();
-							matched++;
-						}
-						
-					}
-					
-				}
-				else {
-					if (unmatched < 2){	
-						if (unmatched == 1){
-							ofstream myfile;
-							myfile.open("Notmatch1.txt");
-							myfile << imageDescriptors[category][image_index].descriptor;
-							myfile.close();
-							unmatched++;
-						}
-						else {
-							ofstream myfile;
-							myfile.open("Notmatch2.txt");
-							myfile << imageDescriptors[category][image_index].descriptor;
-							myfile.close();
-							unmatched++;
-						}
-
-					}
-				}
+			}
 			}
 			total++;
 		}
